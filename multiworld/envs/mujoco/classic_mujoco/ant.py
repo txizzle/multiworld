@@ -56,8 +56,8 @@ class AntEnv(MujocoEnv, Serializable):
                 np.isfinite(state).all()
                 and 0.2 <= state[2] <= 1.0
         )
-        # done = not notdone
-        done = False
+        done = not notdone
+        # done = False
         ob = self._get_obs()
         return ob, reward, done, dict(
             reward_forward=forward_reward,
@@ -127,14 +127,15 @@ class AntXYGoalEnv(AntEnv, GoalEnv, Serializable):
 
     def _get_env_obs(self):
         if self.include_contact_forces_in_state:
+
             return np.concatenate([
-                self.sim.data.qpos.flat,
+                self.sim.data.qpos.flat,  # AntEnv uses [2:]
                 self.sim.data.qvel.flat,
                 np.clip(self.sim.data.cfrc_ext, -1, 1).flat,
             ])
         else:
             return np.concatenate([
-                self.sim.data.qpos.flat,
+                self.sim.data.qpos.flat,  # AntEnv uses [2:]
                 self.sim.data.qvel.flat,
             ])
 
