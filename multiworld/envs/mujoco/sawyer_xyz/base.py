@@ -68,6 +68,7 @@ class SawyerXYZEnv(SawyerMocapBase, metaclass=abc.ABCMeta):
             mocap_low=None,
             mocap_high=None,
             action_scale=2./100,
+            max_steps=250,
             **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -80,6 +81,12 @@ class SawyerXYZEnv(SawyerMocapBase, metaclass=abc.ABCMeta):
             mocap_high = hand_high
         self.mocap_low = np.hstack(mocap_low)
         self.mocap_high = np.hstack(mocap_high)
+        self.max_steps = max_steps
+        self._current_steps = 0
+
+    def reset(self):
+        self._current_steps = 0
+        return super().reset()
 
     def set_xyz_action(self, action):
         action = np.clip(action, -1, 1)

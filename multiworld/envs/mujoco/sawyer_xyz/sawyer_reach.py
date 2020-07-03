@@ -57,7 +57,9 @@ class SawyerReachXYZEnv(SawyerXYZEnv, MultitaskEnv):
         ob = self._get_obs()
         reward = self.compute_reward(action, ob)
         info = self._get_info()
-        done = False
+        notdone = self._current_steps > self.max_steps
+        done = not notdone
+        self._current_steps += 1
         return ob, reward, done, info
 
     def _get_obs(self):

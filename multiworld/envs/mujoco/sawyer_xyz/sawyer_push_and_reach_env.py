@@ -36,6 +36,8 @@ class SawyerPushAndReachXYZEnv(MultitaskEnv, SawyerXYZEnv):
             clamp_puck_on_step=False,
 
             puck_radius=.07,
+
+            max_steps=250,
             **kwargs
     ):
         self.quick_init(locals())
@@ -101,6 +103,10 @@ class SawyerPushAndReachXYZEnv(MultitaskEnv, SawyerXYZEnv):
         self.puck_space = Box(self.puck_low, self.puck_high, dtype=np.float32)
         self.clamp_puck_on_step=clamp_puck_on_step
         self.puck_radius=puck_radius
+
+        self.max_steps = max_steps
+        self._current_steps = 0
+
         self.reset()
 
     def viewer_setup(self):
@@ -126,7 +132,9 @@ class SawyerPushAndReachXYZEnv(MultitaskEnv, SawyerXYZEnv):
         ob = self._get_obs()
         reward = self.compute_reward(action, ob)
         info = self._get_info()
-        done = False
+        notdone = self._current_steps < self.max_steps
+        done = not notdone
+        self._current_steps += 1
         return ob, reward, done, info
 
     def _get_obs(self):
@@ -262,6 +270,7 @@ class SawyerPushAndReachXYZEnv(MultitaskEnv, SawyerXYZEnv):
         ob = self.reset_model()
         if self.viewer is not None:
             self.viewer_setup()
+        self._current_steps = 0
         return ob
 
     @property

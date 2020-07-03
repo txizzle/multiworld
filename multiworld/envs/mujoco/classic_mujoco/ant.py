@@ -19,6 +19,7 @@ class AntEnv(MujocoEnv, Serializable):
             use_low_gear_ratio=False,
             include_contact_forces_in_state=True,
             xml_path=None,
+            max_steps=250,
     ):
         self.quick_init(locals())
         if xml_path is None:
@@ -40,6 +41,9 @@ class AntEnv(MujocoEnv, Serializable):
         low = -high
         self.observation_space = Box(low, high)
 
+        self.max_steps = max_steps
+        self._current_steps = 0
+
     def step(self, a):
         torso_xyz_before = self.get_body_com("torso")
         self.do_simulation(a, self.frame_skip)
@@ -55,9 +59,12 @@ class AntEnv(MujocoEnv, Serializable):
         notdone = (
                 np.isfinite(state).all()
                 and 0.2 <= state[2] <= 1.0
+                and self._current_steps < self.max_steps
         )
         done = not notdone
+
         # done = False
+        self._current_steps += 1
         ob = self._get_obs()
         return ob, reward, done, dict(
             reward_forward=forward_reward,
@@ -79,6 +86,10 @@ class AntEnv(MujocoEnv, Serializable):
                 self.sim.data.qpos.flat[2:],
                 self.sim.data.qvel.flat,
             ])
+
+    def reset(self):
+        self._current_steps = 0
+        return super().reset()
 
     def reset_model(self):
         qpos = self.init_qpos + self.np_random.uniform(size=self.model.nq,
@@ -117,6 +128,29 @@ class AntXYGoalEnv(AntEnv, GoalEnv, Serializable):
         self.goal = self.goal_space.sample()
         return super().reset()
 
+    def step(self, a):
+        self.do_simulation(a, self.frame_skip)
+
+        ob = self._get_obs()
+
+        reward = self.compute_reward(
+            achieved_goal=ob['achieved_goal'],
+            desired_goal=ob['desired_goal'],
+            info=None)
+        state = self.state_vector()
+        notdone = (
+                np.isfinite(state).all()
+                and -5.0 <= state[2] <= 5.0
+                and self._current_steps < self.max_steps
+        )
+        done = not notdone
+
+        # done = False
+        self._current_steps += 1
+
+        return ob, reward, done, None
+
+
     def _get_obs(self):
         state_obs = self._get_env_obs()
         return dict(
@@ -129,13 +163,13 @@ class AntXYGoalEnv(AntEnv, GoalEnv, Serializable):
         if self.include_contact_forces_in_state:
 
             return np.concatenate([
-                self.sim.data.qpos.flat,  # AntEnv uses [2:]
+                self.sim.data.qpos.flat,  # AntEnv and Ant-v2 use [2:]
                 self.sim.data.qvel.flat,
                 np.clip(self.sim.data.cfrc_ext, -1, 1).flat,
             ])
         else:
             return np.concatenate([
-                self.sim.data.qpos.flat,  # AntEnv uses [2:]
+                self.sim.data.qpos.flat,  # AntEnv and Ant-v2 use [2:]
                 self.sim.data.qvel.flat,
             ])
 
